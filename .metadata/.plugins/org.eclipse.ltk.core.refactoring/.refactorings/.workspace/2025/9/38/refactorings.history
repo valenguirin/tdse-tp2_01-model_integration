@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Delete resource &apos;tdse-tp2_01-model_integration/tdse-tp2_01-model_integration Debug.launch&apos;" deleteContents="false" description="Delete resource &apos;tdse-tp2_01-model_integration/tdse-tp2_01-model_integration Debug.launch&apos;" element1="/tdse-tp2_01-model_integration/tdse-tp2_01-model_integration Debug.launch" flags="7" id="org.eclipse.ltk.core.refactoring.delete.resources" resources="1" stamp="1758401428152"/>
+</session>
