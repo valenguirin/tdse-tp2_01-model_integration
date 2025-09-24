@@ -1,0 +1,135 @@
+  app.c (app.h)
+   Endless loops, which execute tasks with fixed computing time. This 
+   sequential execution is only deviated from when an interrupt event occurs.
+   Cyclic Executive (Update by Time Code, period = 1mS)
+
+...
+
+MAIN.C:
+
+El archivo main.c constituye el punto de entrada principal para un proyecto de microcontrolador STM32, desarrollado utilizando el entorno de desarrollo STM32CubeIDE. Este código se
+encarga de la inicialización del microcontrolador, la configuración del reloj del sistema y la inicialización de los periféricos necesarios antes de entrar en un bucle infinito donde se ejecuta la lógica principal de la aplicación.
+Estructura y Componentes Clave
+A continuación, se detallan las secciones más importantes del código:
+Cabecera e Información del Archivo: Proporciona detalles sobre el archivo, su propósito (cuerpo principal del programa) y la información de copyright de STMicroelectronics.
+Inclusiones:
+"main.h": Contiene las definiciones y declaraciones principales del proyecto.
+"logger.h" y "app.h": Inclusiones específicas de la aplicación. Es probable que logger.h gestione la salida de mensajes de depuración y app.h contenga las funciones principales de la lógica de la aplicación.
+Variables Privadas:
+UART_HandleTypeDef huart2;: Declara una estructura para manejar el periférico USART2, comúnmente utilizado para la comunicación en serie.
+Prototipos de Funciones Privadas:
+void SystemClock_Config(void);: Prototipo de la función que configura el reloj del sistema.En nuestr TP EV_SYS_TICK_OPENING y EV_SYS_TICK_CLOSING
+static void MX_GPIO_Init(void);: Prototipo de la función de inicialización de los pines de entrada/salida de propósito general (GPIO).
+static void MX_USART2_UART_Init(void);: Prototipo de la función de inicialización del periférico USART2.
+Función main: Es el punto de entrada de la aplicación y sigue un flujo de ejecución estándar para aplicaciones de microcontroladores:
+Inicialización HAL: HAL_Init() inicializa la Capa de Abstracción de Hardware (HAL) de STM32, que es una biblioteca que simplifica la interacción con los periféricos del microcontrolador.[1][2]
+Configuración del Reloj: SystemClock_Config() configura el oscilador principal y
+los divisores de reloj para los diferentes buses del microcontrolador.
+Inicialización de Periféricos: Se llaman a las funciones MX_GPIO_Init() y
+MX_USART2_UART_Init() para configurar los pines GPIO y el puerto serie USART2.
+Inicialización de la Aplicación: app_init() es una función definida por el
+usuario que probablemente inicializa las variables y estados de la aplicación.
+Bucle Infinito: El while(1) crea un bucle infinito que asegura que el
+microcontrolador ejecute continuamente la lógica de la aplicación.
+Actualización de la Aplicación: Dentro del bucle, se llama a app_update(),
+otra función de usuario que contiene la lógica principal que se ejecuta repetidamente.
+Función SystemClock_Config:
+Configura el oscilador interno de alta velocidad (HSI) como fuente para el PLL (Phase-Locked Loop).
+El PLL se utiliza para multiplicar la frecuencia del oscilador y generar una
+frecuencia de reloj del sistema más alta.
+Luego, configura los divisores de reloj para los buses AHB, APB1 y APB2.
+En caso de que la configuración del oscilador falle (HAL_RCC_OscConfig()
+no devuelva HAL_OK), se llama a la función Error_Handler().[3][4]
+Función MX_USART2_UART_Init:
+Configura el periférico USART2 con parámetros estándar para la comunicación asíncrona:
+115200 baudios, 8 bits de datos, sin paridad y 1 bit de parada.
+Función MX_GPIO_Init:
+Habilita el reloj para los puertos GPIO A, B, C y D.
+Configura el pin LD2_Pin como salida para controlar un LED.
+Configura el pin B1_Pin como entrada con interrupción en el flanco de subida, probablemente para un botón de usuario.
+Inicializa e habilita la interrupción externa para el pin B1.
+Función Error_Handler:
+Es una función que se llama cuando ocurre un error en la HAL. La implementación por defecto deshabilita las interrupciones y entra en un bucle infinito para detener la ejecución.
+Función assert_failed:
+Se utiliza durante el desarrollo para verificar la validez de los parámetros pasados a las funciones de la HAL cuando la opción USE_FULL_ASSERT está habilitada.
+Contexto del Trabajo Práctico
+Este código es la base para el Trabajo Práctico N°2 - Diagramas de Estado – Codificación en C. Los alumnos utilizarán este proyecto como punto de partida para implementar máquinas de estado
+que controlen el comportamiento de sensores y actuadores. Las secciones USER CODE BEGIN y USER CODE END son marcadores donde los estudiantes deben insertar su propio código,
+ asegurando que sus modificaciones no se pierdan si el proyecto se regenera con STM32CubeMX. La estructura con app_init() y app_update() promueve un diseño modular donde la lógica de la aplicación está separada de la inicialización del hardware.
+Sources
+help
+incoherency.co.uk
+upv.es
+upv.es
+csdn.net
+Google Search Suggestions
+Display of Search Suggestions is required when using Grounding with Google Search. Learn more
+TA134 - Taller de Sistemas Embebidos – Ingeniería Electrónica – FIUBA TP2
+codificación de diagramas de estado en C para sistemas embebidos
+STM32CubeIDE tutorial de codificación de maquina de estados
+manejo de errores HAL_Init
+HAL_RCC_OscConfig STM32
+
+
+
+APP.C:
+
+
+Análisis y Documentación del Archivo app.c
+Estructura y Componentes Detallados
+1. Inclusiones (includes)
+main.h: Contiene las definiciones y declaraciones principales del proyecto, probablemente incluyendo las configuraciones de los periféricos generadas por STM32CubeIDE.
+logger.h: Provee macros o funciones para registrar mensajes de diagnóstico o depuración, facilitando el seguimiento de la ejecución del programa.
+dwt.h: Proporciona acceso al contador de ciclos del núcleo ARM (Data Watchpoint and Trace unit), utilizado para mediciones de tiempo de alta precisión.
+board.h: Define abstracciones relacionadas con el hardware específico de la placa, como la configuración de pines o periféricos a nivel de aplicación.
+task_system.h, task_actuator.h, task_sensor.h: Archivos de cabecera que declaran las funciones de inicialización y actualización para cada una de las tareas del sistema (sistema, actuador y sensor).
+2. Tipos de Datos (typedef)
+task_cfg_t: Estructura que define la configuración de una tarea. Contiene:
+task_init: Puntero a la función de inicialización de la tarea.
+task_update: Puntero a la función de actualización de la tarea, que contiene la lógica principal.
+parameters: Puntero a un bloque de parámetros que se puede pasar a las funciones de la tarea.
+
+
+task_dta_t: Estructura que almacena los datos de ejecución de una tarea. En este caso, contiene:
+WCET: Variable de tipo uint32_t para almacenar el Peor Tiempo de Ejecución medido en microsegundos.
+
+
+3. Datos Internos y Externos
+task_cfg_list[]: Array constante de estructuras task_cfg_t. Define el conjunto de tareas que el planificador debe ejecutar. En este caso, se declaran tres tareas: task_sensor, task_system y task_actuator. El orden en este array determina el orden de ejecución.
+task_dta_list[]: Array de estructuras task_dta_t que almacena los datos de ejecución (como el WCET) para cada tarea definida en task_cfg_list.
+g_app_cnt: Contador global que registra el número de veces que se ha ejecutado el ciclo principal de la aplicación.
+g_app_runtime_us: Almacena el tiempo de ejecución total del último ciclo de actualización de todas las tareas, medido en microsegundos.
+g_app_tick_cnt: Contador de "ticks" del sistema, incrementado por la interrupción del Systick. Es una variable volatile para asegurar que el compilador no optimice su acceso, ya que puede ser modificada de forma asíncrona por una interrupción.
+4. Patrones de Diseño de Software
+Planificador Cíclico (Cyclic Executive): El diseño se basa en un bucle principal que se activa periódicamente. La función app_update se ejecuta en cada "tick" del sistema y, a su vez, invoca las funciones de actualización de cada tarea en un orden fijo. Este es un patrón común en sistemas de tiempo real simples donde el determinismo es clave.
+Inyección de Dependencias (mediante punteros a función): La estructura task_cfg_t y el array task_cfg_list permiten añadir, eliminar o reordenar tareas sin modificar la lógica principal del planificador en app.c. Las tareas se "inyectan" en el planificador a través de punteros a sus funciones de inicialización y actualización.
+Descripción de las Funciones
+void app_init(void)
+Propósito: Inicializa el módulo de la aplicación y todas las tareas configuradas.
+Funcionamiento:
+Imprime mensajes de bienvenida y estado inicial a través del logger.
+Inicializa el contador de ciclos del DWT para permitir mediciones de tiempo precisas.
+Recorre el array task_cfg_list y llama a la función de inicialización (task_x_init) de cada tarea.
+Inicializa las estructuras de datos de ejecución, como el WCET de cada tarea.
+Inicializa los contadores de ticks globales, protegiendo esta operación mediante la deshabilitación y posterior habilitación de las interrupciones (__asm("CPSID i") y __asm("CPSIE i")) para evitar condiciones de carrera.
+
+
+void app_update(void)
+Propósito: Es la función principal del planificador, que ejecuta el ciclo de actualización de las tareas.
+Funcionamiento:
+Verifica si hay "ticks" pendientes (g_app_tick_cnt > 0). Esta comprobación se realiza en una sección crítica (con interrupciones deshabilitadas) para garantizar la atomicidad de la lectura y decremento.
+Si hay un tick pendiente, entra en un bucle while que se ejecuta mientras haya tiempo de procesamiento asignado (es decir, ticks).
+Dentro del bucle, para cada tarea en task_cfg_list:
+Resetea el contador de ciclos.
+Llama a la función de actualización de la tarea (task_x_update).
+Mide el tiempo de ejecución de la función task_x_update utilizando el contador de ciclos del DWT.
+Actualiza el tiempo de ejecución total del ciclo (g_app_runtime_us).
+Compara el tiempo de ejecución medido con el WCET almacenado y lo actualiza si el valor actual es mayor.
+El bucle continúa hasta que se procesan todos los ticks acumulados.
+void HAL_SYSTICK_Callback(void)
+Propósito: Es una función de callback que el sistema HAL de STM32 llama en cada interrupción del temporizador Systick (generalmente configurado para 1 ms).
+Funcionamiento:
+Incrementa el contador de ticks global de la aplicación (g_app_tick_cnt).
+Incrementa los contadores de ticks específicos de cada tarea (g_task_sensor_tick_cnt, g_task_system_tick_cnt, g_task_actuator_tick_cnt). Estos contadores pueden ser utilizados por las propias tareas para implementar lógica temporizada.
+
+
