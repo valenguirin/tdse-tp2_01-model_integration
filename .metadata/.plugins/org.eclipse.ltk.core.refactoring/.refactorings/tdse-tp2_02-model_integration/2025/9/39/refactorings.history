@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;tdse-tp2_02-model_integration/app/app.txt&apos; to &apos;sensor_task.txt&apos;" description="Rename resource &apos;app.txt&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="app/app.txt" name="sensor_task.txt" stamp="1758757554562" updateReferences="true"/>
+</session>

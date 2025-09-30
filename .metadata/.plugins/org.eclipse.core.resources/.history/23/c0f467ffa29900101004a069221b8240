@@ -1,0 +1,73 @@
+El sensor implementa el statechart del botón y publica eventos al System
+cuando detecta down/up. Se apoya en:
+	Un arreglo de configuración por botón (qué pin leer, pressed, cuánto tick,
+	qué evento mandar al System en cada transición)
+	
+	Un arreglo de datos por botón (tick, estado y último evento leído)
+	
+Estructuras y arrays:
+
+Tipos en TASK_SENSOR_ATTRIBUTE.H:
+	
+	Eventos del sensor: EV_BTN_XX_UP, EV_BTN_XX_DOWN
+	Estados del sensor: ST_BTN_XX_UP, ST_BTN_XX_FALLING, _ST_BTN_XX_DOWN, ST_BTN_XX_RISING
+	Configuración por botón (task_sensor_cfg_t): id, puerto/pin, pressed, tick_max y qué señal mandar al System en up/down
+	Datos por botón (task_sensor_dta_t): tick, state, event.
+	
+Instancias en TASK_SENSOR.C:
+
+	Configuración: mapea el botón A a su pin y define qué evento mandar al System: 
+	signal_up = EV_SYS_IDLE, signal_down = EV_SYS_LOOP_DET.
+	
+	Datos: inicia tick = 0, state = ST_BTN_XX_UP, event = EV_BTN_XX_UP
+	
+	Constantes de tiempo: DEL_Btn_XX_MIN/MED/MAX
+	
+	
+Planificación "updated by time" (no bloqueante):
+
+El update del sensor se habilita con un tick implementado por SysTick.
+En task_sensor_update():
+	
+	1) Entra, consume un tick si hay (g_task_sensor_tick_cnt--) y marca que debe actualizar.
+	
+	2) Mientras haya trabajo pendiente, ejecuta el statechart (task_sensor_statechart()) y vuelve
+	a chequear si quedaron más ticks acumulados.
+	
+	RESULTADO: no hay delay dentro del statechart, si SysTick tiró varios ticks, el sensor se pone al día sin bloquear.
+	
+
+Lógica del statechart (código C vs diagrama):
+
+TASK_SENSOR_STATECHART.C:
+	
+	1) Lee GPIO y genera evento local: si el nivel leído coincide con la polaridad pressed => EV_BTN_XX_DOWN,
+	si no, => EV_BTN_XX_UP
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
