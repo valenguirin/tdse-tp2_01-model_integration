@@ -1,7 +1,119 @@
-  task_actuator.c (task_actuator.h, task_actuator_attribute.h) 
-   Non-Blocking & Update By Time Code -> Actuator Modeling
+TASK_ACTUATOR: recibe eventos desde system y ejecuta el statechart del LED.
+El system no toca GPIO directo, sino que le manda eventos al actuador y él decide qué escribir
+en el pin según su estado.
 
-  task_actuator_interface.c (task_actuator_interface.h)
-   Non-Blocking Code
+TASK_ACTUATOR_ATTRIBUTE.H: TIPOS, ESTRUCTURAS Y ESPECIFICACIÓN
+Define eventos, estados, IDs y la State Transition Table que el .c debe seguir.
 
-...
+	Eventos task_actuator_ev_t: EV_LED_XX_OFF, EV_LED_XX_ON, EV_LED_XX_NOT_BLINK, EV_LED_XX_BLINK,
+	EV_LED_XX_PULSE. (Los que emite system)
+	
+	Estados task_actuator_st_t: ST_LED_XX_OFF, ST_LED_XX_ON, ST_LED_XX_BLINK_ON,
+	ST_LED_XX_BLINK_OFF, ST_LED_XX_PULSE
+	
+	Identificadores task_actuator_id_t: por ejemplo, ID_LED_A (permite múltiples actuadores).
+	
+	Config por actuator task_actuator_cfg_t: {id, puerto, pin, nivel_on, nivel_off,
+	tick_blink, tick_pulse}. Abstrae hardware y tiempos.
+	
+	Datos por actuator task_actuator_dta_t: {tick, state, event, flag}.
+	flag=“hay evento pendiente”, event=qué llegó, tick=temporizador interno.
+	
+	Tabla de transiciones: indica, para cada estado, qué evento/guarda
+	dispara el próximo estado y qué acciones ejecutar (setear tick = tick_max, tick--, op_led(led)).
+	Es la seguidilla de pasos para completar BLINK/PULSE en el .c
+	
+	
+	TASK_ACTUATOR.C.
+	
+		Constantes y listas (config + datos)
+			Tiempos base: DEL_LED_XX_PUL=250, DEL_LED_XX_BLI=500,
+			DEL_LED_XX_MIN=0
+			
+			Config (un actuador): task_actuator_cfg_list[] = {ID_LED_A,
+			LED_A_PORT, LED_A_PIN, LED_A_ON, LED_A_OFF, tick_blink=500, tick_pulse=250}.
+			Abstrae puerto/pin y polaridad del LED.
+			
+			Datos: task_actuator_dta_list[] = {tick=0, state=ST_LED_XX_OFF, event=EV_LED_XX_NOT_BLINK, flag=false}
+			
+		Init: tasl_actuator_init()
+			Loguea, inicializa dta (state=OFF, event=OFF, flag=false) y lleva al GPIO
+			a estado off (HAL_GPIO_WritePin(..., led_off). Queda listo para empezar.
+			
+		Scheduling_ task_actuator_update()
+			No bloqueanta y update-by-time: consume ticks del contador g_task_actuator_tick_cnt
+			(que alimenta HAL_SYSTICK_Callback desde app.c) y, mientras haya trabajo pendiente, llama
+			a task_actuator_statechart().
+			
+		Núcleo: task_actuator_statechart()
+			Recorre los actuadores (for index...) y hace un switch(state):
+				ST_LED_XX_OFF: si flag==true y event==EV_LED_XX_ON, entonces apaga flag,
+				GPIO = led_on, state = ON. 
+
+
+				ST_LED_XX_ON: si flag==true y event==EV_LED_XX_OFF, entonces apaga flag,
+				GPIO = led_off, state = OFF. 
+
+
+				ST_LED_XX_BLINK_ON / BLINK_OFF / PULSE: están como placeholders
+				(es para completar siguiendo la tabla y foto).
+
+				default: reset defensivo (tick=0, state=OFF, event=OFF, flag=false).
+	
+		OBS: BLINK/PULSE aún no decrementan tick ni alternan estados, eso está descrito en la tabla
+		del header y en el task_actuator.png (la foto)
+		
+	
+	TASK_ACTUATOR.PNG: COMPORTAMIENTO ESPERADO DEL ACTUADOR.
+		El diagrama describe el ciclo completo:
+
+			OFF
+				EV_LED_XX_ON ⇒ ON (GPIO ON).
+				EV_LED_XX_BLINK ⇒ BLINK_ON con tick = MAX y LED ON.
+				EV_LED_XX_PULSE ⇒ PULSE con tick = MAX y LED ON.
+
+			ON
+				EV_LED_XX_OFF ⇒ OFF (GPIO OFF).
+				Si llega EV_LED_XX_ON en ON, se mantiene.
+
+			BLINK_ON / BLINK_OFF (temporizados)
+				En cada uno, mientras tick > MIN ⇒ tick-- y permanecer.
+				Cuando tick == MIN:
+					desde BLINK_ON ⇒ BLINK_OFF, tick = MAX, LED OFF.
+					desde BLINK_OFF ⇒ BLINK_ON, tick = MAX, LED ON.
+				En cualquier BLINK_xx: EV_LED_XX_OFF ⇒ OFF; EV_LED_XX_ON ⇒ ON (override inmediato).
+
+			PULSE (temporizado)
+				Mientras tick > MIN ⇒ tick-- y LED ON.
+				Cuando tick == MIN ⇒ OFF (LED OFF).
+		
+	
+	TASK_ACTUATOR_INTERFACE.H: CÓMO LE LLEGAN LOS EVENTOS.
+		Expone put_event_task_actuator(event, identifier). El sistema llama a esta función
+		para entregar un evento a un actuador específico (por ejemplo, ID_LED_A).
+		En el statechart() se ve que cada actuador procesa su flag, por lo tanto la implementación de
+		put_event_task_actuator(...) (en su .c correspondiente) setea event y flag=true
+		del actuador que corresponde.
+		
+		
+	PATRONES DE DISEÑO:
+	
+		Statechart explícito con switch(case) y consumo de flag exactamente una vez.
+		
+		Update-by-time (no bloqueante) controlado por SysTick.
+		
+		Separación hardware/lógica: cfg guarda puerto, pin y polaridades.
+		La lógica manipula LED vía HAL_GPIO_WritePin usando esa cfg.
+		
+		Desacoplamiento con System: comunicación por eventos (put_event_task_actuator),
+		no por llamadas directas a GPIO desde system.
+		
+		Escalabilidad: arrays task_actuator_cfg_list[] y task_actuator_dta_list[]
+		permiten N actuadores para un único bucle.
+	
+	
+	
+	
+	
+	
+	
